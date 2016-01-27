@@ -20,10 +20,22 @@ def to_shape(element):
         polygon = to_shape(lake.geom)
     """
     assert isinstance(element, (WKBElement, WKTElement))
-    if isinstance(element, WKBElement):
-        return shapely.wkb.loads(bytes(element.data))
-    elif isinstance(element, WKTElement):
-        return shapely.wkt.loads(element.data)
+    try:
+        if isinstance(element, WKBElement):
+            return shapely.wkb.loads(bytes(element.data))
+        elif isinstance(element, WKTElement):
+            return shapely.wkt.loads(element.data)
+    except shapely.geos.ReadingError as e:
+        # TODO: remove the stub of postgis 2.2
+        b = []
+        for x in element.data:
+            b.append(int.from_bytes(x, "little"))
+        b[1] -= 0xe8
+        b[2:5] = [0, 0, 128]
+        if isinstance(element, WKBElement):
+            return shapely.wkb.loads(bytes(b))
+        elif isinstance(element, WKTElement):
+            return shapely.wkt.loads(bytes(b))
 
 
 def from_shape(shape, srid=-1):
